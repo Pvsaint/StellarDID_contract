@@ -1,0 +1,31 @@
+# Rust build output
+target/
+Cargo.lock
+
+# Soroban / Stellar CLI
+.stellar/
+.contract-ids/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V8
+.Trashes
+
+# Editor & IDE
+.vscode/
+.idea/
+*.iml
+*.sw[a-p]
+*~
+
+# Logs
+*.log

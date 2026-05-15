@@ -228,9 +228,3 @@ Include in your PR description:
 ### Security
 
 If you find a vulnerability in the contract logic, please do not open a public issue. Email the maintainers directly. Contract bugs on a live network can have real consequences.
-
----
-
-## License
-
-Apache 2.0
