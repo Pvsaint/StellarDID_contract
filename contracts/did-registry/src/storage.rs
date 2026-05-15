@@ -63,10 +63,12 @@ pub fn read_subject_credential(
     subject: &Address,
     credential_type: &Symbol,
 ) -> Option<BytesN<32>> {
-    env.storage().persistent().get(&LedgerKey::SubjectCredential(
-        subject.clone(),
-        credential_type.clone(),
-    ))
+    env.storage()
+        .persistent()
+        .get(&LedgerKey::SubjectCredential(
+            subject.clone(),
+            credential_type.clone(),
+        ))
 }
 
 /// Record the active credential ID for a given (subject, credential_type) pair.

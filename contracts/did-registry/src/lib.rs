@@ -21,8 +21,8 @@ impl DidRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use soroban_sdk::{symbol_short, vec, Address, Env, String};
     use soroban_sdk::testutils::Address as _;
+    use soroban_sdk::{symbol_short, vec, Address, Env, String};
 
     use crate::{
         storage::{
@@ -59,8 +59,10 @@ mod tests {
         let contract_id = env.register(DidRegistry, ());
         let did = String::from_str(&env, "did:stellar:GABC1234");
         let owner = Address::generate(&env);
-        let doc_hash: soroban_sdk::BytesN<32> =
-            env.crypto().sha256(&soroban_sdk::Bytes::from_slice(&env, &[1u8; 64])).into();
+        let doc_hash: soroban_sdk::BytesN<32> = env
+            .crypto()
+            .sha256(&soroban_sdk::Bytes::from_slice(&env, &[1u8; 64]))
+            .into();
 
         env.as_contract(&contract_id, || {
             assert!(read_did(&env, &did).is_none());
@@ -86,10 +88,14 @@ mod tests {
         let issuer = Address::generate(&env);
         let subject = Address::generate(&env);
         let cred_type = symbol_short!("KYC");
-        let cred_id: soroban_sdk::BytesN<32> =
-            env.crypto().sha256(&soroban_sdk::Bytes::from_slice(&env, &[2u8; 64])).into();
-        let cred_hash: soroban_sdk::BytesN<32> =
-            env.crypto().sha256(&soroban_sdk::Bytes::from_slice(&env, &[3u8; 64])).into();
+        let cred_id: soroban_sdk::BytesN<32> = env
+            .crypto()
+            .sha256(&soroban_sdk::Bytes::from_slice(&env, &[2u8; 64]))
+            .into();
+        let cred_hash: soroban_sdk::BytesN<32> = env
+            .crypto()
+            .sha256(&soroban_sdk::Bytes::from_slice(&env, &[3u8; 64]))
+            .into();
 
         env.as_contract(&contract_id, || {
             assert!(read_credential(&env, &cred_id).is_none());
@@ -121,8 +127,10 @@ mod tests {
         let contract_id = env.register(DidRegistry, ());
         let subject = Address::generate(&env);
         let cred_type = symbol_short!("KYC");
-        let cred_id: soroban_sdk::BytesN<32> =
-            env.crypto().sha256(&soroban_sdk::Bytes::from_slice(&env, &[4u8; 64])).into();
+        let cred_id: soroban_sdk::BytesN<32> = env
+            .crypto()
+            .sha256(&soroban_sdk::Bytes::from_slice(&env, &[4u8; 64]))
+            .into();
 
         env.as_contract(&contract_id, || {
             assert!(read_subject_credential(&env, &subject, &cred_type).is_none());
