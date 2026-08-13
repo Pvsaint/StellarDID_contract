@@ -6,6 +6,9 @@ on:
       - main
   pull_request:
 
+env:
+  STELLAR_CLI_VERSION: "22.0.0"
+
 jobs:
   ci:
     name: Build, Test, Lint & Fmt
@@ -26,15 +29,19 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-1.88.0-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-
+            ${{ runner.os }}-cargo-1.88.0-
 
-      - name: Install Stellar CLI
-        run: cargo install --locked stellar-cli --version 22.0.0
+      - name: Install Stellar CLI (pre-built binary)
+        run: |
+          curl -fsSL "https://github.com/stellar/stellar-cli/releases/download/v${STELLAR_CLI_VERSION}/stellar-cli-${STELLAR_CLI_VERSION}-x86_64-unknown-linux-gnu.tar.gz" \
+            | tar -xz -C /usr/local/bin stellar
+          stellar --version
 
       - name: Build (WASM)
         run: make build
