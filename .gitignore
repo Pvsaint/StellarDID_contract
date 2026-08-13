@@ -1,6 +1,7 @@
 # Rust build output
 target/
-Cargo.lock
+# Note: Cargo.lock is intentionally committed for this binary/contract crate
+# to ensure reproducible builds in CI and on every contributor's machine.
 
 # Soroban / Stellar CLI
 .stellar/
