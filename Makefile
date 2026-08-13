@@ -15,8 +15,10 @@ fmt:
 	cargo fmt --all
 
 # Lint with Clippy
+# Override to native host target for the same reason as `test`: the default
+# wasm32-unknown-unknown target does not compile testutils or std-dependent code.
 lint:
-	cargo clippy --all-targets --all-features -- -D warnings
+	cargo clippy --all-targets --all-features --target $$(rustc -vV | sed -n 's/^host: //p') -- -D warnings
 
 # Remove build artefacts
 clean:
