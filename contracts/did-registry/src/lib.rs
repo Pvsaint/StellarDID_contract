@@ -120,6 +120,15 @@ impl DidRegistry {
         Ok(credential_id)
     }
 
+    /// Resolve a DID to its anchored document hash.
+    ///
+    /// Returns `Some(document_hash)` when the DID is registered, or `None`
+    /// when it has never been registered. No authentication is required —
+    /// this is a public read-only entry point.
+    pub fn resolve(env: Env, did: String) -> Option<BytesN<32>> {
+        read_did(&env, &did).map(|entry| entry.document_hash)
+    }
+
     // -----------------------------------------------------------------------
     // Private helpers
     // -----------------------------------------------------------------------
@@ -501,5 +510,43 @@ mod tests {
             let indexed = read_subject_credential(&env, &subject, &cred_type).unwrap();
             assert_eq!(indexed, second_id);
         });
+    }
+
+    // -----------------------------------------------------------------------
+    // resolve() integration tests
+    // -----------------------------------------------------------------------
+
+    /// resolve() returns the correct document hash after a DID is registered.
+    #[test]
+    fn test_resolve_returns_hash_after_register() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register(DidRegistry, ());
+        let client = DidRegistryClient::new(&env, &contract_id);
+
+        let owner = Address::generate(&env);
+        let did = String::from_str(&env, "did:stellar:GRESOLVE001");
+        let doc_hash = make_doc_hash(&env, 50);
+
+        client
+            .try_register(&owner, &did, &doc_hash)
+            .expect("call should not panic")
+            .expect("register should succeed");
+
+        let result = client.resolve(&did);
+        assert_eq!(result, Some(doc_hash));
+    }
+
+    /// resolve() returns None for a DID that has never been registered.
+    #[test]
+    fn test_resolve_unknown_did_returns_none() {
+        let env = Env::default();
+        let contract_id = env.register(DidRegistry, ());
+        let client = DidRegistryClient::new(&env, &contract_id);
+
+        let did = String::from_str(&env, "did:stellar:GUNKNOWN999");
+        let result = client.resolve(&did);
+        assert_eq!(result, None);
     }
 }
