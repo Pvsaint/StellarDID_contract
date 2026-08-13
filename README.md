@@ -1,5 +1,7 @@
 # StellarDID — Contract
 
+[![CI](https://github.com/Pvsaint/StellarDID_contract/actions/workflows/ci.yml/badge.svg)](https://github.com/Pvsaint/StellarDID_contract/actions/workflows/ci.yml)
+
 > The on-chain identity registry powering StellarDID, built with Soroban on Stellar.
 
 This package contains the `did-registry` Soroban smart contract — the source of truth for DID registrations, verifiable credential issuance, revocation, and composable on-chain verification.
