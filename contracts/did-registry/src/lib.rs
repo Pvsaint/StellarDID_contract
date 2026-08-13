@@ -5,15 +5,16 @@ pub mod storage;
 pub mod types;
 
 use soroban_sdk::{
-    contract, contractimpl, symbol_short, vec, Address, Bytes, BytesN, Env, Symbol, Vec,
+    contract, contractimpl, symbol_short, vec, Address, Bytes, BytesN, Env, String, Symbol, Vec,
 };
 
 use crate::{
     errors::ContractError,
     storage::{
-        read_credential, read_subject_credential, write_credential, write_subject_credential,
+        read_credential, read_did, read_subject_credential, write_credential, write_did,
+        write_subject_credential,
     },
-    types::CredentialEntry,
+    types::{CredentialEntry, DidEntry},
 };
 
 #[contract]
@@ -25,6 +26,41 @@ impl DidRegistry {
     /// Smoke-test entry point — verifies the contract deploys and executes correctly.
     pub fn hello(env: Env, to: Symbol) -> Vec<Symbol> {
         vec![&env, symbol_short!("Hello"), to]
+    }
+
+    /// Register a DID and anchor its document hash on-chain.
+    ///
+    /// `owner` must sign the transaction (`require_auth` is called on them).
+    /// Only the account owner may register their own DID.
+    ///
+    /// `created_at` is set to `env.ledger().timestamp()`.
+    ///
+    /// # Errors
+    /// - [`ContractError::AlreadyExists`] — a DID with this identifier is
+    ///   already registered on-chain.
+    pub fn register(
+        env: Env,
+        owner: Address,
+        did: String,
+        document_hash: BytesN<32>,
+    ) -> Result<(), ContractError> {
+        // Only the owner may register their own DID.
+        owner.require_auth();
+
+        // Reject if the DID is already registered.
+        if read_did(&env, &did).is_some() {
+            return Err(ContractError::AlreadyExists);
+        }
+
+        let entry = DidEntry {
+            owner,
+            document_hash,
+            created_at: env.ledger().timestamp(),
+        };
+
+        write_did(&env, &did, &entry);
+
+        Ok(())
     }
 
     /// Issue a verifiable credential against a subject's DID.
@@ -244,7 +280,77 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // issue_credential integration tests
+    // register() integration tests
+    // -----------------------------------------------------------------------
+
+    fn make_doc_hash(env: &Env, seed: u8) -> BytesN<32> {
+        env.crypto()
+            .sha256(&soroban_sdk::Bytes::from_slice(env, &[seed; 64]))
+            .into()
+    }
+
+    /// Happy path: DID is stored with the correct owner, document hash, and
+    /// created_at timestamp.
+    #[test]
+    fn test_register_happy_path() {
+        let env = Env::default();
+        env.mock_all_auths();
+        env.ledger().set_timestamp(5_000_000);
+
+        let contract_id = env.register(DidRegistry, ());
+        let client = DidRegistryClient::new(&env, &contract_id);
+
+        let owner = Address::generate(&env);
+        let did = String::from_str(&env, "did:stellar:GABC5678");
+        let doc_hash = make_doc_hash(&env, 1);
+
+        client
+            .try_register(&owner, &did, &doc_hash)
+            .expect("call should not panic")
+            .expect("register should succeed");
+
+        // Verify the stored entry directly.
+        env.as_contract(&contract_id, || {
+            let entry = read_did(&env, &did).expect("DID entry should exist after register");
+            assert_eq!(entry.owner, owner);
+            assert_eq!(entry.document_hash, doc_hash);
+            assert_eq!(entry.created_at, 5_000_000);
+        });
+    }
+
+    /// Registering the same DID a second time must return
+    /// `ContractError::AlreadyExists`.
+    #[test]
+    fn test_register_duplicate_rejected() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register(DidRegistry, ());
+        let client = DidRegistryClient::new(&env, &contract_id);
+
+        let owner = Address::generate(&env);
+        let did = String::from_str(&env, "did:stellar:GDUP9999");
+        let doc_hash = make_doc_hash(&env, 2);
+
+        // First registration — must succeed.
+        client
+            .try_register(&owner, &did, &doc_hash)
+            .expect("call should not panic")
+            .expect("first registration should succeed");
+
+        // Second registration of the same DID — must fail.
+        let result = client.try_register(&owner, &did, &doc_hash);
+
+        // try_* returns Result<Result<T, ConversionError>, Result<ContractError, InvokeError>>.
+        // A contract-returned error surfaces as Err(Ok(ContractError)).
+        match result {
+            Err(Ok(err)) => assert_eq!(err, ContractError::AlreadyExists),
+            other => panic!("expected Err(Ok(AlreadyExists)), got {:?}", other),
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // issue_credential() integration tests
     // -----------------------------------------------------------------------
 
     fn make_cred_hash(env: &Env, seed: u8) -> BytesN<32> {
